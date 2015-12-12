@@ -1,5 +1,4 @@
-package com.fribinator.gamemki;
-
+package com.fribinator.anroidgame;
 import android.graphics.Rect;
 
 /**

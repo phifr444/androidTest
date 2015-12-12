@@ -1,5 +1,4 @@
-package com.fribinator.gamemki;
-
+package com.fribinator.anroidgame;
 import android.content.Context;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;

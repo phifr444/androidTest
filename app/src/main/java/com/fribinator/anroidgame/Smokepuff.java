@@ -1,4 +1,4 @@
-package com.fribinator.gamemki;
+package com.fribinator.anroidgame;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
