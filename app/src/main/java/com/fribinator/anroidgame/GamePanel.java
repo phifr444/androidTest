@@ -2,7 +2,10 @@ package com.fribinator.anroidgame;
 import android.content.Context;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -40,6 +43,14 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
     //Increase to slow down difficulty progression, decrease to speed up
     private int progressDenom = 20;
+
+    private Explosion explosion;
+    private long startReset;
+    private boolean reset;
+    private boolean disappear;
+    private  boolean started;
+
+    private int best = 0;
 
     private Random rand = new Random();
 
@@ -94,9 +105,13 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            if (!player.isPlaying()) {
+            if (!player.isPlaying() && newGameCreated && reset) {
                 player.setPlaying(true);
-            } else {
+                player.setUp(true);
+            }
+            if (player.isPlaying()){
+                if (!started)started = true;
+                reset = false;
                 player.setUp(true);
             }
             return true;
@@ -111,6 +126,15 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
     public void update() {
         if (player.isPlaying()) {
+            if (botBorders.isEmpty()){
+                player.setPlaying(false);
+                return;
+            }
+            if (topBorders.isEmpty()){
+                player.setPlaying(false);
+                return;
+            }
+
             background.update();
             player.update();
 
@@ -192,7 +216,18 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
         else {
-            if (!newGameCreated){
+            player.resetDY();
+            if (!reset){
+                newGameCreated = false;
+                startReset = System.nanoTime();
+                reset = true;
+                disappear = true;
+                explosion = new Explosion(BitmapFactory.decodeResource(getResources(), R.drawable.explosion),
+                        player.getX(), player.getY() - 30, 100, 100, 25);
+            }
+            explosion.update();
+            long resetElapsaed = (System.nanoTime() - startReset)/1000000;
+            if (resetElapsaed > 2500 && !newGameCreated){
                 newGame();
             }
         }
@@ -215,7 +250,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
             final int savedState = canvas.save();
             canvas.scale(scaleFactorX, scaleFactorY);
             background.draw(canvas);
-            player.draw(canvas);
+            if (!disappear) player.draw(canvas);
             for (Smokepuff sp : smokepuffs) {
                 sp.draw(canvas);
             }
@@ -230,9 +265,12 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
             for (BotBorder bb : botBorders){
                 bb.draw(canvas);
             }
+            //Draw explosion
+            if (started){
+                explosion.draw(canvas);
+            }
+            drawText(canvas);
             canvas.restoreToCount(savedState);
-
-
         }
     }
 
@@ -301,8 +339,11 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void newGame(){
+        disappear = false;
+
         botBorders.clear();
         topBorders.clear();
+
         missiles.clear();
         smokepuffs.clear();
 
@@ -314,7 +355,9 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
         player.resetScore();
         player.setY(HEIGHT/2);
 
-
+        if (player.getScore() > best){
+            best = player.getScore();
+        }
         //Create initial top borders
         for (int i = 0; i*20 < WIDTH+40; i++){
             //First top border created
@@ -340,7 +383,26 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
                         i*20, botBorders.get(i-1).getY() - 1));
             }
         }
-
         newGameCreated = true;
+    }
+
+    public void drawText(Canvas canvas){
+        Paint paint = new Paint();
+        paint.setColor(Color.BLACK);
+        paint.setTextSize(30);
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        canvas.drawText("DISTANCE: " + (player.getScore() * 3), 10, HEIGHT - 10, paint);
+        canvas.drawText("BEST: " + best, WIDTH - 215, HEIGHT - 10, paint);
+
+        if (!player.isPlaying() && newGameCreated && reset){
+            Paint paint1 = new Paint();
+            paint1.setTextSize(40);
+            paint1.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("PRESS TO START", WIDTH/2 - 50, HEIGHT/2 + 20, paint1);
+
+            paint1.setTextSize(20);
+            canvas.drawText("PRESS AND HOLD TO GO UP", WIDTH/2 - 50, HEIGHT/2 + 40, paint1);
+            canvas.drawText("RELEASE TO GO DOWN", WIDTH/2 - 50, HEIGHT/2 + 60, paint1);
+        }
     }
 }
